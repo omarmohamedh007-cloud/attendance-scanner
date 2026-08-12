@@ -4,23 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>توليد QR Code للطلاب</title>
-    <!-- مكتبة جديدة ومستقرة تدعم اللغة العربية والترميز تلقائياً -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #121212; color: white; }
         input { padding: 12px; margin: 8px; width: 80%; max-width: 300px; border-radius: 6px; border: 1px solid #444; font-size: 16px; background: #222; color: white; text-align: center; }
         button { padding: 12px 25px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        button:hover { background: #218838; }
         #qr-container { margin-top: 20px; display: none; background: white; padding: 20px; border-radius: 10px; width: fit-content; margin-left: auto; margin-right: auto; }
-        canvas { display: block; margin: 0 auto; }
     </style>
 </head>
 <body>
 
     <h2>توليد QR Code للطلاب</h2>
-    <input type="text" id="studentId" placeholder="كود الطالب (مثال: 1000)"><br>
+    <input type="text" id="studentId" placeholder="كود الطالب"><br>
     <input type="text" id="studentName" placeholder="اسم الطالب"><br>
-    <input type="text" id="studentGroup" placeholder="المجموعة (مثال: 2)"><br>
+    <input type="text" id="studentGroup" placeholder="المجموعة"><br>
     <button onclick="generateQR()">إنشاء الباركود</button>
 
     <div id="qr-container">
@@ -28,29 +25,33 @@
     </div>
 
     <script>
+        function utf8_to_b64(str) {
+            return window.btoa(unescape(encodeURIComponent(str)));
+        }
+
         function generateQR() {
             let id = document.getElementById("studentId").value.trim();
             let name = document.getElementById("studentName").value.trim();
             let group = document.getElementById("studentGroup").value.trim();
 
             if(!id || !name) { 
-                alert("يرجى كتابة كود الطالب واسمه على الأقل!"); 
+                alert("يرجى كتابة كود الطالب واسمه!"); 
                 return; 
             }
 
-            // تجهيز البيانات وتأمين اللغة العربية بترميز UTF-8
-            let rawData = id + " | " + name + " | " + (group || "غير محدد");
+            // تحويل البيانات لـ JSON ثم Base64 لمنع مشاكل الترميز تماماً
+            let dataObject = { id: id, name: name, group: group || "غير محدد" };
+            let safeData = "SAFE_" + utf8_to_b64(JSON.stringify(dataObject));
 
             document.getElementById("qr-container").style.display = "block";
 
             new QRious({
                 element: document.getElementById("qrCanvas"),
-                value: rawData,
+                value: safeData,
                 size: 220,
                 level: 'H'
             });
         }
     </script>
-
 </body>
 </html>
