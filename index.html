@@ -16,18 +16,19 @@
 </head>
 <body>
 
-    <h2>ماسح الحضور والتسجيل</h2>
+    <h2>ماسح الحضور (النسخة الإعدادية)</h2>
     <div id="reader"></div>
 
     <button class="btn-excel" onclick="exportToCSV()">تنزيل شيت الحضور (Excel)</button>
 
-    <h3>قائمة الحاضرين اليوم</h3>
+    <h3>قائمة الحاضرين</h3>
     <table id="attendanceTable">
         <thead>
             <tr>
-                <th>كود الطالب</th>
+                <th>كود</th>
                 <th>الاسم</th>
                 <th>المجموعة</th>
+                <th>الصف</th>
                 <th>الوقت</th>
             </tr>
         </thead>
@@ -37,70 +38,47 @@
     <script>
         let records = [];
 
-        function b64_to_utf8(str) {
-            return decodeURIComponent(escape(window.atob(str)));
-        }
-
         function onScanSuccess(decodedText) {
-            let id = "", name = "", group = "";
-
-            if (decodedText.startsWith("SAFE_")) {
-                try {
-                    let base64Str = decodedText.replace("SAFE_", "");
-                    let jsonStr = b64_to_utf8(base64Str);
-                    let data = JSON.parse(jsonStr);
-                    id = data.id;
-                    name = data.name;
-                    group = data.group;
-                } catch(e) {
-                    alert("خطأ في قراءة الكود التشفيري!");
+            let data = {};
+            try {
+                if (decodedText.startsWith("QR_DATA:")) {
+                    data = JSON.parse(decodeURIComponent(decodedText.replace("QR_DATA:", "")));
+                } else {
+                    alert("هذا الباركود غير متوافق مع النظام المحدث!");
                     return;
                 }
-            } else {
-                // دعم أرقام فقط أو صيغة قديمة
-                id = decodedText;
-                name = "غير معروف";
-                group = "غير محدد";
-            }
+            } catch(e) { alert("خطأ في قراءة البيانات!"); return; }
 
-            let time = new Date().toLocaleTimeString("ar-EG");
-
-            if(records.some(r => r.id === id)) {
-                alert("⚠️ الطالب: " + name + " مسجل حضور بالفعل!");
+            if(records.some(r => r.id === data.id)) {
+                alert("⚠️ " + data.name + " مسجل حضور بالفعل!");
                 return;
             }
 
-            records.push({ id, name, group, time });
+            data.time = new Date().toLocaleTimeString("ar-EG");
+            records.push(data);
 
             let table = document.getElementById("attendanceTable").querySelector("tbody");
             let row = table.insertRow(0);
-            row.insertCell(0).innerText = id;
-            row.insertCell(1).innerText = name;
-            row.insertCell(2).innerText = group;
-            row.insertCell(3).innerText = time;
+            row.insertCell(0).innerText = data.id;
+            row.insertCell(1).innerText = data.name;
+            row.insertCell(2).innerText = data.group;
+            row.insertCell(3).innerText = data.grade;
+            row.insertCell(4).innerText = data.time;
 
-            alert("✅ تم تسجيل حضور: " + name);
+            alert("✅ تم تسجيل حضور: " + data.name);
         }
 
         const html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-        html5QrCode.start(
-            { facingMode: "environment" },
-            config,
-            onScanSuccess
-        ).catch(err => {
-            html5QrCode.start({ facingMode: "user" }, config, onScanSuccess);
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess).catch(err => {
+            html5QrCode.start({ facingMode: "user" }, { fps: 10, qrbox: 250 }, onScanSuccess);
         });
 
         function exportToCSV() {
-            if(records.length === 0) { alert("لا توجد بيانات حضور لتنزيلها!"); return; }
-            let csvContent = "data:text/csv;charset=utf-8,\uFEFFكود الطالب,الاسم,المجموعة,الوقت\n";
-            records.forEach(r => csvContent += `${r.id},${r.name},${r.group},${r.time}\n`);
-
-            let encodedUri = encodeURI(csvContent);
+            if(records.length === 0) { alert("لا توجد بيانات!"); return; }
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFFكود,الاسم,المجموعة,الصف,الوقت\n";
+            records.forEach(r => csvContent += `${r.id},${r.name},${r.group},${r.grade},${r.time}\n`);
             let link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
+            link.setAttribute("href", encodeURI(csvContent));
             link.setAttribute("download", "حضور_الطلاب.csv");
             document.body.appendChild(link);
             link.click();
