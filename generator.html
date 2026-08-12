@@ -2,22 +2,38 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إنشاء كود الطالب</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>body { text-align: center; padding: 30px; font-family: sans-serif; }</style>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #121212; color: white; }
+        input { padding: 10px; margin: 8px; width: 80%; max-width: 300px; border-radius: 5px; border: 1px solid #444; font-size: 16px; }
+        button { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        #qrcode { margin-top: 20px; display: flex; justify-content: center; background: white; padding: 15px; border-radius: 10px; width: fit-content; margin-left: auto; margin-right: auto; }
+    </style>
 </head>
 <body>
-    <h2>توليد QR Code</h2>
-    <input type="text" id="studentId" placeholder="الكود"><br>
-    <input type="text" id="studentName" placeholder="الاسم"><br>
+    <h2>توليد QR Code للطلاب</h2>
+    <input type="text" id="studentId" placeholder="كود الطالب"><br>
+    <input type="text" id="studentName" placeholder="اسم الطالب"><br>
     <input type="text" id="studentGroup" placeholder="المجموعة"><br>
-    <button onclick="generateQR()">إنشاء</button>
+    <button onclick="generateQR()">إنشاء الباركود</button>
     <div id="qrcode"></div>
+
     <script>
+        let qrcode = new QRCode(document.getElementById("qrcode"), { width: 200, height: 200 });
+
         function generateQR() {
-            let data = document.getElementById("studentId").value + " | " + document.getElementById("studentName").value + " | " + document.getElementById("studentGroup").value;
-            document.getElementById("qrcode").innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), data);
+            let id = document.getElementById("studentId").value;
+            let name = document.getElementById("studentName").value;
+            let group = document.getElementById("studentGroup").value;
+
+            if(!id || !name) { alert("يرجى كتابة الكود والاسم!"); return; }
+
+            // تجميع البيانات وتشفير النص العربي
+            let rawData = `${id}|${name}|${group}`;
+            qrcode.clear();
+            qrcode.makeCode(encodeURIComponent(rawData));
         }
     </script>
 </body>
