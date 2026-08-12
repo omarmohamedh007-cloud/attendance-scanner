@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ماسح الحضور</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #reader { width: 100%; max-width: 400px; margin: auto; }
+        table { width: 90%; margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #007bff; color: white; }
+        .btn-excel { background: #17a2b8; color: white; padding: 10px 20px; border: none; font-size: 16px; cursor: pointer; border-radius: 5px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>ماسح الحضور والتسجيل</h2>
+    <div id="reader"></div>
+    
+    <button class="btn-excel" onclick="exportToCSV()">تحميل ملف الحضور (Excel)</button>
+
+    <h3>قائمة الحاضرين اليوم</h3>
+    <table id="attendanceTable">
+        <thead>
+            <tr>
+                <th>كود الطالب</th>
+                <th>الاسم</th>
+                <th>المجموعة</th>
+                <th>تاريخ ووقت الحضور</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        let records = [];
+
+        function onScanSuccess(decodedText) {
+            // تفكيك النص المكتوب في الـ QR Code
+            let parts = decodedText.split(" | ");
+            let id = parts[0] || decodedText;
+            let name = parts[1] || "غير معروف";
+            let group = parts[2] || "غير محدد";
+            let time = new Date().toLocaleString("ar-EG");
+
+            // منع التكرار في نفس اليوم
+            let exists = records.some(r => r.id === id);
+            if(exists) {
+                alert("هذا الطالب تم تسجيل حضوره بالفعل!");
+                return;
+            }
+
+            records.push({ id, name, group, time });
+
+            // إضافة للجدول
+            let table = document.getElementById("attendanceTable").querySelector("tbody");
+            let row = table.insertRow();
+            row.insertCell(0).innerText = id;
+            row.insertCell(1).innerText = name;
+            row.insertCell(2).innerText = group;
+            row.insertCell(3).innerText = time;
+
+            alert("تم تسجيل حضور: " + name);
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
+
+        // تصدير البيانات إلى ملف Excel/CSV
+        function exportToCSV() {
+            if(records.length === 0) { alert("لا توجد بيانات حضور لتنزيلها"); return; }
+            
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "كود الطالب,الاسم,المجموعة,الوقت والتاريخ\n";
+
+            records.forEach(r => {
+                csvContent += `${r.id},${r.name},${r.group},${r.time}\n`;
+            });
+
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "حضور_الطلاب.csv");
+            document.body.appendChild(link);
+            link.click();
+        }
+    </script>
+</body>
+</html>

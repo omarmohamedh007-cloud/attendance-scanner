@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إنشاء كود الطالب</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 30px; background: #f4f4f9; }
+        input, select, button { padding: 10px; margin: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+        button { background: #28a745; color: white; cursor: pointer; }
+        #qrcode { margin-top: 20px; display: flex; justify-content: center; }
+    </style>
+</head>
+<body>
+    <h2>توليد QR Code للطلاب</h2>
+    <input type="text" id="studentId" placeholder="كود الطالب">
+    <input type="text" id="studentName" placeholder="اسم الطالب">
+    <input type="text" id="studentGroup" placeholder="المجموعة (مثلاً: أحدث 4 مساءً)">
+    <br>
+    <button onclick="generateQR()">إنشاء الباركود</button>
+
+    <div id="qrcode"></div>
+
+    <script>
+        function generateQR() {
+            let id = document.getElementById("studentId").value;
+            let name = document.getElementById("studentName").value;
+            let group = document.getElementById("studentGroup").value;
+
+            if(!id || !name) { alert("برجاء إدخال الكود والاسم"); return; }
+
+            // دمج البيانات في نص واحد مفصول بـ |
+            let data = id + " | " + name + " | " + group;
+
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), {
+                text: data,
+                width: 180,
+                height: 180
+            });
+        }
+    </script>
+</body>
+</html>
