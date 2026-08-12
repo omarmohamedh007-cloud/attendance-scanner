@@ -3,42 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ماسح الحضور</title>
+    <title>نظام الحضور التراكمي الشامل</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- مكتبة SheetJS لإنشاء ملفات إكسل XLSX -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 15px; background-color: #121212; color: #ffffff; }
-        #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 10px; overflow: hidden; border: 2px solid #007bff; }
-        table { width: 95%; margin: 20px auto; border-collapse: collapse; background: #1e1e1e; }
-        th, td { border: 1px solid #333; padding: 10px; text-align: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 15px; background-color: #121212; color: #ffffff; }
+        .controls-card { background: #1e1e1e; padding: 15px; border-radius: 10px; max-width: 500px; margin: 0 auto 15px auto; border: 1px solid #333; }
+        .input-group { margin: 8px 0; display: flex; gap: 10px; justify-content: center; align-items: center; }
+        select, input { padding: 8px; font-size: 15px; border-radius: 5px; border: 1px solid #444; background: #2a2a2a; color: white; width: 45%; }
+        #reader { width: 100%; max-width: 400px; margin: 10px auto; border-radius: 10px; overflow: hidden; border: 2px solid #007bff; }
+        table { width: 98%; margin: 15px auto; border-collapse: collapse; background: #1e1e1e; font-size: 14px; }
+        th, td { border: 1px solid #333; padding: 8px; text-align: center; }
         th { background-color: #007bff; color: white; }
-        .btn-excel { background: #28a745; color: white; padding: 12px 24px; border: none; font-size: 16px; cursor: pointer; border-radius: 8px; margin-top: 15px; font-weight: bold; }
+        .btn { padding: 10px 20px; font-size: 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 5px; }
+        .btn-excel { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .session-badge { background: #17a2b8; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <h2>ماسح الحضور (النسخة المنسقة)</h2>
+    <h2>نظام الحضور التراكمي للطلاب</h2>
+
+    <div class="controls-card">
+        <div class="input-group">
+            <label>الصف الدراسي:</label>
+            <select id="gradeSelect" onchange="loadGradeData()">
+                <option value="الأول الإعدادي">الأول الإعدادي</option>
+                <option value="الثاني الإعدادي">الثاني الإعدادي</option>
+                <option value="الثالث الإعدادي">الثالث الإعدادي</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>رقم الحصة الحالية:</label>
+            <input type="number" id="sessionNum" value="1" min="1" style="width:70px;">
+        </div>
+        <button class="btn btn-excel" onclick="exportMasterExcel()">📥 تنزيل سجل الصف المحدد (Excel)</button>
+        <button class="btn btn-danger" onclick="clearGradeData()">🗑️ مسح سجل هذا الصف</button>
+    </div>
+
     <div id="reader"></div>
 
-    <button class="btn-excel" onclick="exportToExcel()">تنزيل شيت الحضور (Excel)</button>
-
-    <h3>قائمة الحاضرين</h3>
-    <table id="attendanceTable">
-        <thead>
-            <tr>
-                <th>كود الطالب</th>
-                <th>اسم الطالب</th>
-                <th>المجموعة</th>
-                <th>الصف الدراسي</th>
-                <th>وقت الحضور</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <h3>قائمة الحضور - <span id="currentGradeTitle">الأول الإعدادي</span></h3>
+    <div style="overflow-x:auto;">
+        <table id="attendanceTable">
+            <thead>
+                <tr id="tableHeader">
+                    <th>الكود</th>
+                    <th>الاسم</th>
+                    <th>المجموعة</th>
+                    <th>تفاصيل آخر حضور</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
 
     <script>
-        let records = [];
+        // داتابيز محلية لحفظ بيانات الصفوف
+        let database = JSON.parse(localStorage.getItem("master_attendance")) || {
+            "الأول الإعدادي": {},
+            "الثاني الإعدادي": {},
+            "الثالث الإعدادي": {}
+        };
+
+        function saveToStorage() {
+            localStorage.setItem("master_attendance", JSON.stringify(database));
+        }
+
+        function loadGradeData() {
+            let grade = document.getElementById("gradeSelect").value;
+            document.getElementById("currentGradeTitle").innerText = grade;
+            let students = database[grade] || {};
+            
+            let tbody = document.getElementById("tableBody");
+            tbody.innerHTML = "";
+
+            Object.values(students).reverse().forEach(st => {
+                let row = tbody.insertRow();
+                row.insertCell(0).innerText = st.id;
+                row.insertCell(1).innerText = st.name;
+                row.insertCell(2).innerText = st.group || "-";
+                
+                // إظهار آخر حصة تم تسجيلها
+                let sessions = Object.keys(st.attendance || {});
+                let lastSession = sessions.length > 0 ? sessions[sessions.length - 1] : "لم يحضر";
+                let lastTime = lastSession !== "لم يحضر" ? st.attendance[lastSession] : "-";
+                
+                row.insertCell(3).innerHTML = `<span class="session-badge">${lastSession}</span> (${lastTime})`;
+            });
+        }
 
         function onScanSuccess(decodedText) {
             let data = {};
@@ -46,28 +100,39 @@
                 if (decodedText.startsWith("QR_DATA:")) {
                     data = JSON.parse(decodeURIComponent(decodedText.replace("QR_DATA:", "")));
                 } else {
-                    alert("هذا الباركود غير متوافق مع النظام المحدث!");
+                    alert("هذا الباركود غير متوافق مع النظام!");
                     return;
                 }
             } catch(e) { alert("خطأ في قراءة البيانات!"); return; }
 
-            if(records.some(r => r.id === data.id)) {
-                alert("⚠️ " + data.name + " مسجل حضور بالفعل!");
+            let currentGrade = document.getElementById("gradeSelect").value;
+            let sessionNumber = "الحصة " + document.getElementById("sessionNum").value;
+            let currentTime = new Date().toLocaleTimeString("ar-EG");
+
+            if (!database[currentGrade]) database[currentGrade] = {};
+
+            // إذا كان الطالب جديد ننشئ له سجل
+            if (!database[currentGrade][data.id]) {
+                database[currentGrade][data.id] = {
+                    id: data.id,
+                    name: data.name,
+                    group: data.group || "-",
+                    attendance: {}
+                };
+            }
+
+            // التحقق إذا تسجل في نفس الحصة مسبقاً
+            if (database[currentGrade][data.id].attendance[sessionNumber]) {
+                alert(`⚠️ ${data.name} مسجل حضور بالفعل في (${sessionNumber})!`);
                 return;
             }
 
-            data.time = new Date().toLocaleTimeString("ar-EG");
-            records.push(data);
+            // تسجيل الحضور في الحصة المحددة
+            database[currentGrade][data.id].attendance[sessionNumber] = currentTime;
+            saveToStorage();
+            loadGradeData();
 
-            let table = document.getElementById("attendanceTable").querySelector("tbody");
-            let row = table.insertRow(0);
-            row.insertCell(0).innerText = data.id;
-            row.insertCell(1).innerText = data.name;
-            row.insertCell(2).innerText = data.group;
-            row.insertCell(3).innerText = data.grade;
-            row.insertCell(4).innerText = data.time;
-
-            alert("✅ تم تسجيل حضور: " + data.name);
+            alert(`✅ تم تسجيل حضور: ${data.name} - [${sessionNumber}]`);
         }
 
         const html5QrCode = new Html5Qrcode("reader");
@@ -75,37 +140,57 @@
             html5QrCode.start({ facingMode: "user" }, { fps: 10, qrbox: 250 }, onScanSuccess);
         });
 
-        // دالة التصدير وتنسيق أبعاد الأعمدة والمحاذاة تلقائياً
-        function exportToExcel() {
-            if(records.length === 0) { 
-                alert("لا توجد بيانات حضور لتنزيلها!"); 
-                return; 
+        // تصدير ملف الإكسل التراكمي
+        function exportMasterExcel() {
+            let grade = document.getElementById("gradeSelect").value;
+            let students = Object.values(database[grade] || {});
+
+            if (students.length === 0) {
+                alert("لا توجد بيانات حضور مسجلة لهذا الصف!");
+                return;
             }
 
-            let excelData = records.map(r => ({
-                "كود الطالب": r.id,
-                "اسم الطالب": r.name,
-                "المجموعة": r.group,
-                "الصف الدراسي": r.grade,
-                "وقت الحضور": r.time
-            }));
+            // تجميع كل الحصص التي تم تسجيلها في هذا الصف
+            let allSessions = new Set();
+            students.forEach(st => {
+                Object.keys(st.attendance || {}).forEach(sess => allSessions.add(sess));
+            });
+            let sortedSessions = Array.from(allSessions).sort();
 
-            let worksheet = XLSX.utils.json_to_sheet(excelData);
+            // بناء الصفوف للإكسل
+            let excelRows = students.map(st => {
+                let rowData = {
+                    "كود الطالب": st.id,
+                    "اسم الطالب": st.name,
+                    "رقم المجموعة": st.group
+                };
+                
+                // إضافة أعمدة الحصص التراكمية (الحصة 1، الحصة 2...)
+                sortedSessions.forEach(sess => {
+                    rowData[sess] = st.attendance[sess] || "غائب";
+                });
 
-            // تحديد أبعاد واسعة للأعمدة لكي يظهر الاسم والنص كاملاً وسليماً
-            worksheet['!cols'] = [
-                { wch: 15 }, // كود الطالب
-                { wch: 28 }, // اسم الطالب (مساحة واسعة للأسماء الثنائية والثلاثية)
-                { wch: 15 }, // المجموعة
-                { wch: 22 }, // الصف الدراسي
-                { wch: 18 }  // وقت الحضور
-            ];
+                return rowData;
+            });
 
+            let worksheet = XLSX.utils.json_to_sheet(excelRows);
             let workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "الحضور");
+            XLSX.utils.book_append_sheet(workbook, worksheet, grade);
 
-            XLSX.writeFile(workbook, "حضور_الطلاب_منسق.xlsx");
+            XLSX.writeFile(workbook, `سجل_حضور_${grade}.xlsx`);
         }
+
+        function clearGradeData() {
+            let grade = document.getElementById("gradeSelect").value;
+            if (confirm(`هل أنت تأكد من مسح كافة سجلات حضور (${grade})؟`)) {
+                database[grade] = {};
+                saveToStorage();
+                loadGradeData();
+            }
+        }
+
+        // تحميل البيانات عند فتح الصفحة
+        loadGradeData();
     </script>
 </body>
 </html>
