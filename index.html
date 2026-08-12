@@ -37,11 +37,32 @@
     <script>
         let records = [];
 
+        function b64_to_utf8(str) {
+            return decodeURIComponent(escape(window.atob(str)));
+        }
+
         function onScanSuccess(decodedText) {
-            let parts = decodedText.split(" | ");
-            let id = parts[0] ? parts[0].trim() : decodedText;
-            let name = parts[1] ? parts[1].trim() : "غير معروف";
-            let group = parts[2] ? parts[2].trim() : "غير محدد";
+            let id = "", name = "", group = "";
+
+            if (decodedText.startsWith("SAFE_")) {
+                try {
+                    let base64Str = decodedText.replace("SAFE_", "");
+                    let jsonStr = b64_to_utf8(base64Str);
+                    let data = JSON.parse(jsonStr);
+                    id = data.id;
+                    name = data.name;
+                    group = data.group;
+                } catch(e) {
+                    alert("خطأ في قراءة الكود التشفيري!");
+                    return;
+                }
+            } else {
+                // دعم أرقام فقط أو صيغة قديمة
+                id = decodedText;
+                name = "غير معروف";
+                group = "غير محدد";
+            }
+
             let time = new Date().toLocaleTimeString("ar-EG");
 
             if(records.some(r => r.id === id)) {
