@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طباعة أكواد الطلاب</title>
+    <!-- مكتبة توليد الـ QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; padding: 20px; direction: rtl; text-align: center; }
+        .controls { background: #fff; padding: 20px; border-radius: 10px; max-width: 600px; margin: 0 auto 30px auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .input-group { margin-bottom: 12px; display: flex; gap: 10px; justify-content: center; }
+        input, select { padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 5px; outline: none; }
+        .btn { background: #007bff; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-print { background: #28a745; margin-top: 15px; }
+
+        /* شبكة الكروت للطباعة */
+        .cards-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-top: 20px; }
+        .card { width: 180px; padding: 15px; background: white; border: 2px dashed #007bff; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-inside: avoid; box-sizing: border-box; }
+        .qr-box { margin-bottom: 10px; }
+        .student-name { font-weight: bold; font-size: 16px; color: #111; margin-bottom: 4px; word-break: break-word; }
+        .student-code { font-size: 14px; color: #555; background: #f0f0f0; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+
+        /* إعدادات الطباعة خافية لكافة الأزرار والمدخلات */
+        @media print {
+            .controls { display: none !important; }
+            body { background: white; padding: 0; margin: 0; }
+            .cards-grid { gap: 10px; justify-content: flex-start; }
+            .card { border: 1px solid #333; width: 31%; margin-bottom: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <h2>مولّد وطابع كروت الطلاب (QR Code)</h2>
+        <div class="input-group">
+            <input type="text" id="studentId" placeholder="كود الطالب (مثال: 1000)">
+            <input type="text" id="studentName" placeholder="اسم الطالب">
+        </div>
+        <div class="input-group">
+            <input type="text" id="studentGroup" placeholder="المجموعة (مثال: 2)">
+            <input type="text" id="studentGrade" placeholder="الصف (مثال: الأول الإعدادي)">
+        </div>
+        <button class="btn" onclick="addCard()">إضافة الطالب للقائمة</button>
+        <br>
+        <button class="btn btn-print" onclick="window.print()">🖨️ طباعة الكروت (PDF)</button>
+    </div>
+
+    <!-- مكان عرض الكروت المجهزة للطباعة -->
+    <div class="cards-grid" id="cardsGrid"></div>
+
+    <script>
+        function addCard() {
+            let id = document.getElementById("studentId").value.trim();
+            let name = document.getElementById("studentName").value.trim();
+            let group = document.getElementById("studentGroup").value.trim();
+            let grade = document.getElementById("studentGrade").value.trim();
+
+            if(!id || !name) {
+                alert("برجاء إدخال كود واسم الطالب على الأقل!");
+                return;
+            }
+
+            // تجهيز نص الـ QR المتوافق مع الماسح
+            let qrText = "QR_DATA:" + encodeURIComponent(JSON.stringify({
+                id: id,
+                name: name,
+                group: group || "-",
+                grade: grade || "-"
+            }));
+
+            let grid = document.getElementById("cardsGrid");
+
+            // إنشاء كارت جديد
+            let card = document.createElement("div");
+            card.className = "card";
+
+            let qrContainer = document.createElement("div");
+            qrContainer.className = "qr-box";
+            card.appendChild(qrContainer);
+
+            let nameEl = document.createElement("div");
+            nameEl.className = "student-name";
+            nameEl.innerText = name;
+            card.appendChild(nameEl);
+
+            let codeEl = document.createElement("div");
+            codeEl.className = "student-code";
+            codeEl.innerText = "كود: " + id;
+            card.appendChild(codeEl);
+
+            grid.appendChild(card);
+
+            // توليد الـ QR Code داخل الكارت
+            new QRCode(qrContainer, {
+                text: qrText,
+                width: 120,
+                height: 120,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            // مسح الخانات لإدخال طالب آخر
+            document.getElementById("studentId").value = "";
+            document.getElementById("studentName").value = "";
+        }
+    </script>
+</body>
+</html>
