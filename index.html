@@ -1,4 +1,4 @@
-٠<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -6,34 +6,114 @@
     <title>ماسح الحضور</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        #reader { width: 100%; max-width: 400px; margin: auto; }
-        .btn-excel { background: #17a2b8; color: white; padding: 10px 20px; border: none; font-size: 16px; cursor: pointer; border-radius: 5px; margin-top: 10px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 15px; 
+            background-color: #121212; 
+            color: #ffffff; 
+        }
+        #reader { 
+            width: 100%; 
+            max-width: 400px; 
+            margin: 15px auto; 
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #007bff;
+        }
+        table { width: 95%; margin: 20px auto; border-collapse: collapse; background: #1e1e1e; }
+        th, td { border: 1px solid #333; padding: 10px; text-align: center; }
+        th { background-color: #007bff; color: white; }
+        .btn-excel { 
+            background: #17a2b8; 
+            color: white; 
+            padding: 12px 24px; 
+            border: none; 
+            font-size: 16px; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            margin-top: 15px; 
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
+
     <h2>ماسح الحضور والتسجيل</h2>
     <div id="reader"></div>
-    <button class="btn-excel" onclick="exportToCSV()">تحميل ملف الحضور (Excel)</button>
+
+    <button class="btn-excel" onclick="exportToCSV()">تنزيل شيت الحضور (Excel)</button>
+
+    <h3>قائمة الحاضرين اليوم</h3>
+    <table id="attendanceTable">
+        <thead>
+            <tr>
+                <th>كود الطالب</th>
+                <th>الاسم</th>
+                <th>المجموعة</th>
+                <th>الوقت</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
     <script>
         let records = [];
+
         function onScanSuccess(decodedText) {
             let parts = decodedText.split(" | ");
             let id = parts[0] || decodedText;
             let name = parts[1] || "غير معروف";
             let group = parts[2] || "غير محدد";
-            let time = new Date().toLocaleString("ar-EG");
-            if(records.some(r => r.id === id)) { alert("هذا الطالب تم تسجيل حضوره!"); return; }
+            let time = new Date().toLocaleTimeString("ar-EG");
+
+            // منع تكرار التسجيل
+            if(records.some(r => r.id === id)) {
+                alert("⚠️ الطالب: " + name + " مسجل حضور بالفعل!");
+                return;
+            }
+
             records.push({ id, name, group, time });
-            alert("تم تسجيل حضور: " + name);
+
+            // إضافة للجدول
+            let table = document.getElementById("attendanceTable").querySelector("tbody");
+            let row = table.insertRow(0); // إضافة في الأعلى
+            row.insertCell(0).innerText = id;
+            row.insertCell(1).innerText = name;
+            row.insertCell(2).innerText = group;
+            row.insertCell(3).innerText = time;
+
+            alert("✅ تم تسجيل حضور: " + name);
         }
-        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-        html5QrcodeScanner.render(onScanSuccess);
+
+        // تشغيل الكاميرا الخلفية تلقائياً
+        const html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+        html5QrCode.start(
+            { facingMode: "environment" }, // الكاميرا الخلفية
+            config,
+            onScanSuccess
+        ).catch(err => {
+            console.error("خطأ في تشغيل الكاميرا الخلفية:", err);
+            // في حال عدم دعم الخيار، افتح الكاميرا المتاحة
+            html5QrCode.start({ facingMode: "user" }, config, onScanSuccess);
+        });
+
+        // تصدير ملف Excel/CSV
         function exportToCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,\uFEFFكود الطالب,الاسم,المجموعة,الوقت والتاريخ\n";
-            records.forEach(r => csvContent += `${r.id},${r.name},${r.group},${r.time}\n`);
+            if(records.length === 0) { 
+                alert("لا توجد بيانات حضور لتنزيلها!"); 
+                return; 
+            }
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFFكود الطالب,الاسم,المجموعة,الوقت\n";
+            records.forEach(r => {
+                csvContent += `${r.id},${r.name},${r.group},${r.time}\n`;
+            });
+
+            let encodedUri = encodeURI(csvContent);
             let link = document.createElement("a");
-            link.setAttribute("href", encodeURI(csvContent));
+            link.setAttribute("href", encodedUri);
             link.setAttribute("download", "حضور_الطلاب.csv");
             document.body.appendChild(link);
             link.click();
