@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ماسح الحضور</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- مكتبة SheetJS لإنشاء ملفات إكسل XLSX حقيقية -->
+    <!-- مكتبة SheetJS لإنشاء ملفات إكسل XLSX -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 15px; background-color: #121212; color: #ffffff; }
@@ -18,7 +18,7 @@
 </head>
 <body>
 
-    <h2>ماسح الحضور (النسخة الإعدادية V3)</h2>
+    <h2>ماسح الحضور (النسخة المنسقة)</h2>
     <div id="reader"></div>
 
     <button class="btn-excel" onclick="exportToExcel()">تنزيل شيت الحضور (Excel)</button>
@@ -75,14 +75,13 @@
             html5QrCode.start({ facingMode: "user" }, { fps: 10, qrbox: 250 }, onScanSuccess);
         });
 
-        // دالة إنشاء ملف Excel حقيقي بخانات منفصلة تماماً
+        // دالة التصدير وتنسيق أبعاد الأعمدة والمحاذاة تلقائياً
         function exportToExcel() {
             if(records.length === 0) { 
                 alert("لا توجد بيانات حضور لتنزيلها!"); 
                 return; 
             }
 
-            // ترتيب البيانات للجدول
             let excelData = records.map(r => ({
                 "كود الطالب": r.id,
                 "اسم الطالب": r.name,
@@ -91,13 +90,21 @@
                 "وقت الحضور": r.time
             }));
 
-            // إنشاء ملف XLSX حقيقي
             let worksheet = XLSX.utils.json_to_sheet(excelData);
+
+            // تحديد أبعاد واسعة للأعمدة لكي يظهر الاسم والنص كاملاً وسليماً
+            worksheet['!cols'] = [
+                { wch: 15 }, // كود الطالب
+                { wch: 28 }, // اسم الطالب (مساحة واسعة للأسماء الثنائية والثلاثية)
+                { wch: 15 }, // المجموعة
+                { wch: 22 }, // الصف الدراسي
+                { wch: 18 }  // وقت الحضور
+            ];
+
             let workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "الحضور");
 
-            // تنزيل الملف بصيغة .xlsx
-            XLSX.writeFile(workbook, "حضور_الطلاب.xlsx");
+            XLSX.writeFile(workbook, "حضور_الطلاب_منسق.xlsx");
         }
     </script>
 </body>
