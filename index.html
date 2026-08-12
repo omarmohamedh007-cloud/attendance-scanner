@@ -1,43 +1,42 @@
-<!DOCTYPE html>
+٠<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>إنشاء كود الطالب</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ماسح الحضور</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 30px; background: #f4f4f9; }
-        input, select, button { padding: 10px; margin: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
-        button { background: #28a745; color: white; cursor: pointer; }
-        #qrcode { margin-top: 20px; display: flex; justify-content: center; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #reader { width: 100%; max-width: 400px; margin: auto; }
+        .btn-excel { background: #17a2b8; color: white; padding: 10px 20px; border: none; font-size: 16px; cursor: pointer; border-radius: 5px; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <h2>توليد QR Code للطلاب</h2>
-    <input type="text" id="studentId" placeholder="كود الطالب">
-    <input type="text" id="studentName" placeholder="اسم الطالب">
-    <input type="text" id="studentGroup" placeholder="المجموعة (مثلاً: أحدث 4 مساءً)">
-    <br>
-    <button onclick="generateQR()">إنشاء الباركود</button>
-
-    <div id="qrcode"></div>
-
+    <h2>ماسح الحضور والتسجيل</h2>
+    <div id="reader"></div>
+    <button class="btn-excel" onclick="exportToCSV()">تحميل ملف الحضور (Excel)</button>
     <script>
-        function generateQR() {
-            let id = document.getElementById("studentId").value;
-            let name = document.getElementById("studentName").value;
-            let group = document.getElementById("studentGroup").value;
-
-            if(!id || !name) { alert("برجاء إدخال الكود والاسم"); return; }
-
-            // دمج البيانات في نص واحد مفصول بـ |
-            let data = id + " | " + name + " | " + group;
-
-            document.getElementById("qrcode").innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), {
-                text: data,
-                width: 180,
-                height: 180
-            });
+        let records = [];
+        function onScanSuccess(decodedText) {
+            let parts = decodedText.split(" | ");
+            let id = parts[0] || decodedText;
+            let name = parts[1] || "غير معروف";
+            let group = parts[2] || "غير محدد";
+            let time = new Date().toLocaleString("ar-EG");
+            if(records.some(r => r.id === id)) { alert("هذا الطالب تم تسجيل حضوره!"); return; }
+            records.push({ id, name, group, time });
+            alert("تم تسجيل حضور: " + name);
+        }
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
+        function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFFكود الطالب,الاسم,المجموعة,الوقت والتاريخ\n";
+            records.forEach(r => csvContent += `${r.id},${r.name},${r.group},${r.time}\n`);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csvContent));
+            link.setAttribute("download", "حضور_الطلاب.csv");
+            document.body.appendChild(link);
+            link.click();
         }
     </script>
 </body>
