@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>طباعة أكواد الطلاب</title>
-    <!-- مكتبة توليد الـ QR Code المستقرة -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; padding: 20px; direction: rtl; text-align: center; }
         .controls { background: #fff; padding: 20px; border-radius: 10px; max-width: 600px; margin: 0 auto 30px auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -15,8 +13,8 @@
         .btn-print { background: #28a745; margin-top: 15px; }
 
         .cards-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-top: 20px; }
-        .card { width: 180px; padding: 15px; background: white; border: 2px dashed #007bff; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-inside: avoid; box-sizing: border-box; }
-        .qr-canvas { margin-bottom: 10px; width: 130px; height: 130px; }
+        .card { width: 200px; padding: 15px; background: white; border: 2px dashed #007bff; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-inside: avoid; box-sizing: border-box; }
+        .qr-img { width: 140px; height: 140px; margin-bottom: 10px; border: 1px solid #eee; }
         .student-name { font-weight: bold; font-size: 16px; color: #111; margin-bottom: 4px; word-break: break-word; }
         .student-code { font-size: 14px; color: #555; background: #f0f0f0; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
 
@@ -66,15 +64,19 @@
                 grade: grade || "-"
             }));
 
+            // استخدام رابط سريع لتوليد الصورة مباشرة عبر API مدمجة
+            let qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(qrText);
+
             let grid = document.getElementById("cardsGrid");
 
             let card = document.createElement("div");
             card.className = "card";
 
-            // عنصر Canvas للرسم عليه
-            let canvas = document.createElement("canvas");
-            canvas.className = "qr-canvas";
-            card.appendChild(canvas);
+            let img = document.createElement("img");
+            img.className = "qr-img";
+            img.src = qrApiUrl;
+            img.alt = "QR Code";
+            card.appendChild(img);
 
             let nameEl = document.createElement("div");
             nameEl.className = "student-name";
@@ -87,13 +89,6 @@
             card.appendChild(codeEl);
 
             grid.appendChild(card);
-
-            // توليد كود الـ QR على الـ Canvas
-            new QRious({
-                element: canvas,
-                value: qrText,
-                size: 130
-            });
 
             document.getElementById("studentId").value = "";
             document.getElementById("studentName").value = "";
