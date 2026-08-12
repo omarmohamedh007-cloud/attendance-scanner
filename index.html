@@ -37,26 +37,9 @@
     <script>
         let records = [];
 
-        function decodeTextProperly(text) {
-            try {
-                return decodeURIComponent(escape(text));
-            } catch (e) {
-                try {
-                    return decodeURIComponent(text);
-                } catch (err) {
-                    return text;
-                }
-            }
-        }
-
         function onScanSuccess(decodedText) {
-            let cleanText = decodeTextProperly(decodedText);
-
-            // تقسيم النص سواء كان المفصل بـ | أو spaces أو -
-            let parts = cleanText.split("|");
-            if (parts.length < 2) parts = cleanText.split(" - ");
-
-            let id = parts[0] ? parts[0].trim() : cleanText;
+            let parts = decodedText.split(" | ");
+            let id = parts[0] ? parts[0].trim() : decodedText;
             let name = parts[1] ? parts[1].trim() : "غير معروف";
             let group = parts[2] ? parts[2].trim() : "غير محدد";
             let time = new Date().toLocaleTimeString("ar-EG");
