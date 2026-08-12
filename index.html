@@ -6,35 +6,12 @@
     <title>ماسح الحضور</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            text-align: center; 
-            padding: 15px; 
-            background-color: #121212; 
-            color: #ffffff; 
-        }
-        #reader { 
-            width: 100%; 
-            max-width: 400px; 
-            margin: 15px auto; 
-            border-radius: 10px;
-            overflow: hidden;
-            border: 2px solid #007bff;
-        }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 15px; background-color: #121212; color: #ffffff; }
+        #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 10px; overflow: hidden; border: 2px solid #007bff; }
         table { width: 95%; margin: 20px auto; border-collapse: collapse; background: #1e1e1e; }
         th, td { border: 1px solid #333; padding: 10px; text-align: center; }
         th { background-color: #007bff; color: white; }
-        .btn-excel { 
-            background: #17a2b8; 
-            color: white; 
-            padding: 12px 24px; 
-            border: none; 
-            font-size: 16px; 
-            cursor: pointer; 
-            border-radius: 8px; 
-            margin-top: 15px; 
-            font-weight: bold;
-        }
+        .btn-excel { background: #17a2b8; color: white; padding: 12px 24px; border: none; font-size: 16px; cursor: pointer; border-radius: 8px; margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -61,13 +38,15 @@
         let records = [];
 
         function onScanSuccess(decodedText) {
-            let parts = decodedText.split(" | ");
-            let id = parts[0] || decodedText;
+            let cleanText = decodedText;
+            try { cleanText = decodeURIComponent(decodedText); } catch(e) {}
+
+            let parts = cleanText.split("|");
+            let id = parts[0] || cleanText;
             let name = parts[1] || "غير معروف";
             let group = parts[2] || "غير محدد";
             let time = new Date().toLocaleTimeString("ar-EG");
 
-            // منع تكرار التسجيل
             if(records.some(r => r.id === id)) {
                 alert("⚠️ الطالب: " + name + " مسجل حضور بالفعل!");
                 return;
@@ -75,9 +54,8 @@
 
             records.push({ id, name, group, time });
 
-            // إضافة للجدول
             let table = document.getElementById("attendanceTable").querySelector("tbody");
-            let row = table.insertRow(0); // إضافة في الأعلى
+            let row = table.insertRow(0);
             row.insertCell(0).innerText = id;
             row.insertCell(1).innerText = name;
             row.insertCell(2).innerText = group;
@@ -86,30 +64,21 @@
             alert("✅ تم تسجيل حضور: " + name);
         }
 
-        // تشغيل الكاميرا الخلفية تلقائياً
         const html5QrCode = new Html5Qrcode("reader");
         const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
         html5QrCode.start(
-            { facingMode: "environment" }, // الكاميرا الخلفية
+            { facingMode: "environment" },
             config,
             onScanSuccess
         ).catch(err => {
-            console.error("خطأ في تشغيل الكاميرا الخلفية:", err);
-            // في حال عدم دعم الخيار، افتح الكاميرا المتاحة
             html5QrCode.start({ facingMode: "user" }, config, onScanSuccess);
         });
 
-        // تصدير ملف Excel/CSV
         function exportToCSV() {
-            if(records.length === 0) { 
-                alert("لا توجد بيانات حضور لتنزيلها!"); 
-                return; 
-            }
+            if(records.length === 0) { alert("لا توجد بيانات حضور لتنزيلها!"); return; }
             let csvContent = "data:text/csv;charset=utf-8,\uFEFFكود الطالب,الاسم,المجموعة,الوقت\n";
-            records.forEach(r => {
-                csvContent += `${r.id},${r.name},${r.group},${r.time}\n`;
-            });
+            records.forEach(r => csvContent += `${r.id},${r.name},${r.group},${r.time}\n`);
 
             let encodedUri = encodeURI(csvContent);
             let link = document.createElement("a");
