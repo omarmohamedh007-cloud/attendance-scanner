@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ماسح الحضور</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- مكتبة تحويل البيانات لملف إكسل حقيقي .xlsx -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 15px; background-color: #121212; color: #ffffff; }
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 10px; overflow: hidden; border: 2px solid #007bff; }
@@ -22,17 +20,17 @@
     <h2>ماسح الحضور (النسخة الإعدادية)</h2>
     <div id="reader"></div>
 
-    <button class="btn-excel" onclick="exportToExcel()">تنزيل شيت الحضور (Excel)</button>
+    <button class="btn-excel" onclick="exportTableToExcel()">تنزيل شيت الحضور (Excel)</button>
 
     <h3>قائمة الحاضرين</h3>
     <table id="attendanceTable">
         <thead>
             <tr>
-                <th>كود</th>
-                <th>الاسم</th>
+                <th>كود الطالب</th>
+                <th>اسم الطالب</th>
                 <th>المجموعة</th>
-                <th>الصف</th>
-                <th>الوقت</th>
+                <th>الصف الدراسي</th>
+                <th>وقت الحضور</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -76,28 +74,22 @@
             html5QrCode.start({ facingMode: "user" }, { fps: 10, qrbox: 250 }, onScanSuccess);
         });
 
-        function exportToExcel() {
-            if(records.length === 0) { 
-                alert("لا توجد بيانات حضور لتنزيلها!"); 
-                return; 
-            }
+        // دالة تصدير الجدول مباشرة إلى ملف .xls مشفر بخانات منفصلة
+        function exportTableToExcel() {
+            let table = document.getElementById("attendanceTable");
+            let html = table.outerHTML;
 
-            // تجهيز البيانات للهيكل المجدول
-            let excelData = records.map(r => ({
-                "كود الطالب": r.id,
-                "اسم الطالب": r.name,
-                "المجموعة": r.group,
-                "الصف الدراسي": r.grade,
-                "وقت الحضور": r.time
-            }));
+            let blob = new Blob(['\ufeff' + html], {
+                type: 'application/vnd.ms-excel;charset=utf-8'
+            });
 
-            // إنشاء شيت إكسل رسمي بصيغة XLSX
-            let worksheet = XLSX.utils.json_to_sheet(excelData);
-            let workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "الحضور");
-
-            // تنزيل الملف
-            XLSX.writeFile(workbook, "حضور_الطلاب.xlsx");
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = "حضور_الطلاب.xls";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
     </script>
 </body>
